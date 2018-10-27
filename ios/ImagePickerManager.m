@@ -198,8 +198,19 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
                 self.callback(@[@{@"error": @"Camera permissions not granted"}]);
                 return;
             }
-
+          
+          NSDictionary *storageOptions = [self.options objectForKey:@"storageOptions"];
+          if (storageOptions && [[storageOptions objectForKey:@"cameraRoll"] boolValue] == YES) {
+            [self checkPhotosPermissions:^(BOOL granted) {
+              if (!granted) {
+                self.callback(@[@{@"error": @"Photo library permissions not granted"}]);
+                return;
+              }
+              showPickerViewController();
+            }];
+          } else {
             showPickerViewController();
+          }
         }];
     }
     else { // RNImagePickerTargetLibrarySingleImage
@@ -404,6 +415,8 @@ RCT_EXPORT_METHOD(showImagePicker:(NSDictionary *)options callback:(RCTResponseS
                     [library writeImageToSavedPhotosAlbum:originalImage.CGImage metadata:[info valueForKey:UIImagePickerControllerMediaMetadata] completionBlock:^(NSURL *assetURL, NSError *error) {
                         if (error) {
                             NSLog(@"Error while saving picture into photo album");
+                            self.callback(@[@{@"error": error.localizedFailureReason}]);
+                            return;
                         } else {
                             // when the image has been saved in the photo album
                             if (assetURL) {
